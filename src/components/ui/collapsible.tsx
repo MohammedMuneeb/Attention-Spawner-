@@ -1,8 +1,8 @@
 import { SymbolView } from 'expo-symbols';
 import { PropsWithChildren, useState } from 'react';
+
 import { Pressable, StyleSheet } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -10,36 +10,38 @@ import { useTheme } from '@/hooks/use-theme';
 
 export function Collapsible({ children, title }: PropsWithChildren & { title: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const theme = useTheme();
 
+  const theme = useTheme();
   return (
-    <ThemedView>
+    <ThemedView >
       <Pressable
         style={({ pressed }) => [styles.heading, pressed && styles.pressedHeading]}
         onPress={() => setIsOpen((value) => !value)}>
-        <ThemedView type="backgroundElement" style={styles.button}>
+        <ThemedView style={styles.button} type="backgroundElement" >
           <SymbolView
             name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+
             size={14}
             weight="bold"
             tintColor={theme.text}
             style={{ transform: [{ rotate: isOpen ? '-90deg' : '90deg' }] }}
           />
-        </ThemedView>
+        </ThemedView >
 
-        <ThemedText type="small">{title}</ThemedText>
-      </Pressable>
+        <ThemedText type="small">{title}</ThemedText >
+      </Pressable >
+
       {isOpen && (
         <Animated.View entering={FadeIn.duration(200)}>
-          <ThemedView type="backgroundElement" style={styles.content}>
+          <ThemedView style={styles.content} type="backgroundElement" >
             {children}
-          </ThemedView>
-        </Animated.View>
+          </ThemedView >
+        </Animated.View >
       )}
-    </ThemedView>
+    </ThemedView >
   );
-}
 
+}
 const styles = StyleSheet.create({
   heading: {
     flexDirection: 'row',
