@@ -1,59 +1,77 @@
-import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider, useRootNavigationState } from 'expo-router';
+import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider, useNavigationContainerRef } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import React from 'react';
-import { useColorScheme } from 'react-native';
+import { AppState, useColorScheme } from 'react-native';
 import { useIntegrityCheck } from '../hooks/useIntegrityCheck';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const rootNavigationState = useRootNavigationState();
+  const navigationRef = useNavigationContainerRef();
   useIntegrityCheck();
 
   React.useEffect(() => {
-    if (!rootNavigationState?.key) return;
-
     let isMounted = true;
     let eventSubscription: any = null;
+
+    const navigateToIntercept = (blockedApp: string | null) => {
+      if (!isMounted || !blockedApp) return;
+
+      const attempt = () => {
+        if (!isMounted) return;
+        if (navigationRef?.isReady()) {
+          try {
+            const currentRoute = (navigationRef.getCurrentRoute() as any);
+            if (currentRoute?.name === 'intercept') {
+              return; // Already on intercept screen
+            }
+            router.replace({
+              pathname: '/intercept',
+              params: { blockedApp },
+            });
+          } catch (e) {
+            console.log('Safe navigation suppressed error:', e);
+          }
+        } else {
+          setTimeout(attempt, 50);
+        }
+      };
+
+      // Slight delay to ensure React commit phase completes
+      setTimeout(attempt, 50);
+    };
 
     const checkIntent = async () => {
       try {
         const AttentionArchitectureModule = (await import('../../modules/attention-architecture')).default;
         const intentData = AttentionArchitectureModule.getInterceptIntent();
         if (intentData && intentData.isIntercept && isMounted) {
-          router.replace({
-            pathname: '/intercept',
-            params: { blockedApp: intentData.blockedApp }
-          });
+          navigateToIntercept(intentData.blockedApp);
         }
       } catch (e) {
         console.log('Module not ready', e);
       }
     };
 
-    // Check initially once root navigator is ready
+    // Check on initial layout mount
     checkIntent();
 
-    // Listen for events (if they arrive while app is in foreground)
+    // Listen for events arriving while app is in foreground
     import('../../modules/attention-architecture').then((AttentionArchitectureModule) => {
       if (isMounted) {
         eventSubscription = (AttentionArchitectureModule.default as any).addListener('onIntercept', (event: any) => {
-          if (isMounted) {
-            router.replace({
-              pathname: '/intercept',
-              params: { blockedApp: event.blockedApp }
-            });
+          if (isMounted && event?.blockedApp) {
+            navigateToIntercept(event.blockedApp);
           }
         });
       }
     }).catch(e => console.log('Module not ready', e));
 
-    // Ultimate failsafe: check when app comes to foreground
-    const { AppState } = require('react-native');
-    const appStateSubscription = AppState.addEventListener('change', (nextAppState: any) => {
+    // Check when app resumes to foreground
+    const appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'active') {
         checkIntent();
       }
@@ -66,7 +84,7 @@ export default function RootLayout() {
       }
       appStateSubscription.remove();
     };
-  }, [rootNavigationState?.key]);
+  }, []);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
