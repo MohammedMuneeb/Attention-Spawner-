@@ -1,9 +1,9 @@
 package com.attentionarchitecture 
-
 import android.app.AppOpsManager
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
+
+import android.content.Context 
+import android.content.Intent 
+import android.net.Uri 
 import android.os.Build
 import android.os.Process
 import android.provider.Settings 
@@ -147,6 +147,46 @@ class AttentionArchitectureModule : Module() {
             "isIntercept" to false,
             "blockedApp" to null
         )
+    }
+
+    Function("allowAndLaunchApp") { packageName: String, minutes: Int ->
+        val context = appContext.reactContext
+        if (context != null) {
+            val prefs = context.getSharedPreferences("attention_architecture_prefs", Context.MODE_PRIVATE)
+            val expiry = System.currentTimeMillis() + (minutes * 60 * 1000L)
+            val currentBlocked = prefs.getStringSet("blocked_apps", setOf()) ?: setOf()
+            val newBlocked = currentBlocked.toMutableSet()
+            newBlocked.remove(packageName)
+
+            prefs.edit()
+                .putString("snoozed_app", packageName)
+                .putLong("snooze_expiry", expiry)
+                .putLong("snooze_expiry_$packageName", expiry)
+                .putStringSet("blocked_apps", newBlocked)
+                .apply()
+
+            val pm = context.packageManager
+            val launchIntent = pm.getLaunchIntentForPackage(packageName)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(launchIntent)
+                return@Function true
+            }
+        }
+        return@Function false
+    }
+
+    Function("goToHomeScreen") { ->
+        val context = appContext.reactContext
+        if (context != null) {
+            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(homeIntent)
+            return@Function true
+        }
+        return@Function false
     }
   }
 }

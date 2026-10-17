@@ -38,8 +38,8 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "image": "./assets/images/attentionspawner.png",
+          "imageWidth": 120
         }
       ],
       "./withAttentionArchitecture.js"
@@ -53,6 +53,7 @@
       "eas": {
         "projectId": "0312bfd5-c8a1-4014-a0d7-eeb723effffc"
       }
-    }
+    },
+    "owner": "mohammedmuneeb"
   }
 }

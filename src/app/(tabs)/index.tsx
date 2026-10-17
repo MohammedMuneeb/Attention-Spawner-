@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AttentionArchitectureModule from '../../modules/attention-architecture';
+import AttentionArchitectureModule from '../../../modules/attention-architecture';
+import { getBlockedConfig, setAppBlocked } from '../../utils/blockerManager';
 
 export default function HomeScreen() {
   const [hasUsagePermission, setHasUsagePermission] = useState(false);
   const [hasOverlayPermission, setHasOverlayPermission] = useState(false);
   const [blockedApps, setBlockedApps] = useState<string[]>([]);
   const [installedApps, setInstalledApps] = useState<{ id: string; name: string }[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     checkPermissions();
@@ -39,8 +41,8 @@ export default function HomeScreen() {
 
   const loadBlockedApps = () => {
     try {
-      const apps = AttentionArchitectureModule.getBlockedApps();
-      setBlockedApps(apps);
+      const config = getBlockedConfig();
+      setBlockedApps(config.masterApps);
     } catch (e) {
       console.log('Could not load apps', e);
     }
@@ -56,17 +58,17 @@ export default function HomeScreen() {
   };
 
   const toggleApp = (appId: string, value: boolean) => {
-    let newApps = [...blockedApps];
-    if (value) {
-      newApps.push(appId);
-    } else {
-      newApps = newApps.filter((id) => id !== appId);
-    }
-    setBlockedApps(newApps);
-    AttentionArchitectureModule.setBlockedApps(newApps);
+    const config = setAppBlocked(appId, value);
+    setBlockedApps(config.masterApps);
   };
 
   const isFullyConfigured = hasUsagePermission && hasOverlayPermission;
+
+  const filteredApps = installedApps.filter(
+    (app) =>
+      app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      app.id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -108,23 +110,56 @@ export default function HomeScreen() {
         )}
       </View>
 
-      <Text style={styles.sectionTitle}>Mindful Interception List</Text>
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>Mindful Interception List</Text>
+        <View style={styles.badgeContainer}>
+          <Text style={styles.badgeText}>
+            {filteredApps.length} {filteredApps.length === 1 ? 'app' : 'apps'}
+          </Text>
+        </View>
+      </View>
 
-      <ScrollView style={styles.listContainer}>
-        {installedApps.map((app) => (
-          <View key={app.id} style={styles.appRow}>
-            <View style={styles.appRowLeft}>
-              <Ionicons name="apps-outline" size={24} color="#e0e0e0" />
-              <Text style={styles.appName}>{app.name}</Text>
-            </View>
-            <Switch
-              value={blockedApps.includes(app.id)}
-              onValueChange={(val) => toggleApp(app.id, val)}
-              trackColor={{ false: '#374151', true: '#4ade80' }}
-              thumbColor={'#fff'}
-            />
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={18} color="#94a3b8" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search apps..."
+          placeholderTextColor="#64748b"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+          autoCorrect={false}
+          clearButtonMode="while-editing"
+        />
+        {searchQuery.length > 0 && (
+          <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+            <Ionicons name="close-circle" size={18} color="#94a3b8" />
+          </Pressable>
+        )}
+      </View>
+
+      <ScrollView style={styles.listContainer} keyboardShouldPersistTaps="handled">
+        {filteredApps.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="search-outline" size={32} color="#64748b" />
+            <Text style={styles.emptyText}>No apps found matching "{searchQuery}"</Text>
           </View>
-        ))}
+        ) : (
+          filteredApps.map((app) => (
+            <View key={app.id} style={styles.appRow}>
+              <View style={styles.appRowLeft}>
+                <Ionicons name="apps-outline" size={24} color="#e0e0e0" />
+                <Text style={styles.appName} numberOfLines={1}>{app.name}</Text>
+              </View>
+              <Switch
+                value={blockedApps.includes(app.id)}
+                onValueChange={(val) => toggleApp(app.id, val)}
+                trackColor={{ false: '#374151', true: '#4ade80' }}
+                thumbColor={'#fff'}
+              />
+            </View>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -155,7 +190,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1e293b',
     borderRadius: 16,
     padding: 20,
-    marginBottom: 30,
+    marginBottom: 24,
     borderWidth: 1,
     borderColor: '#334155',
   },
@@ -196,15 +231,64 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#f1f5f9',
-    marginBottom: 15,
-    paddingHorizontal: 5,
+  },
+  badgeContainer: {
+    backgroundColor: '#1e293b',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  badgeText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '600',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1e293b',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 46,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#f1f5f9',
+    fontSize: 15,
+    paddingVertical: 0,
   },
   listContainer: {
     flex: 1,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 10,
+  },
+  emptyText: {
+    color: '#94a3b8',
+    fontSize: 14,
+    textAlign: 'center',
   },
   appRow: {
     flexDirection: 'row',
@@ -218,10 +302,13 @@ const styles = StyleSheet.create({
   appRowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
   },
   appName: {
     color: '#f1f5f9',
     fontSize: 16,
     marginLeft: 15,
+    flexShrink: 1,
   },
 });

@@ -1,5 +1,5 @@
-import * as Application from 'expo-application';
 import { Platform } from 'react-native';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 
 /**
  * Service to handle Play Integrity verification conditionally.
@@ -25,11 +25,22 @@ export const integrityService = {
         return;
       }
 
+      // Check if native module is present in the current runtime (prevents crash in Expo Go)
+      const hasNativeModule = !!requireOptionalNativeModule('ExpoApplication');
+      if (!hasNativeModule) {
+        console.log('[IntegrityService] ExpoApplication native module not available in current runtime (e.g., Expo Go). Skipping check.');
+        return;
+      }
+
+      // Safely import Application module
+      const Application = await import('expo-application');
+
       // Dynamically detect installer package
       let installerPackage = 'unknown';
       try {
-        // Some devices might throw an error or return an empty string if there's no install referrer
-        installerPackage = await Application.getInstallReferrerAsync() || 'unknown';
+        if (Application && typeof Application.getInstallReferrerAsync === 'function') {
+          installerPackage = (await Application.getInstallReferrerAsync()) || 'unknown';
+        }
       } catch (e) {
         console.warn('[IntegrityService] Could not retrieve install referrer:', e);
       }

@@ -11,6 +11,8 @@ declare class AttentionArchitectureModule extends NativeModule<{}> {
   startForegroundService(): void;
   stopForegroundService(): void;
   getInterceptIntent(): { isIntercept: boolean; blockedApp: string | null };
+  allowAndLaunchApp(packageName: string, minutes: number): boolean;
+  goToHomeScreen(): boolean;
 }
 
 export default requireNativeModule<AttentionArchitectureModule>('AttentionArchitecture');

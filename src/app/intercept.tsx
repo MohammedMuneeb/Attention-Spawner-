@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Animated, BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
+
 import { BlurView } from 'expo-blur';
-import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { useLocalSearchParams } from 'expo-router';
 
 export default function InterceptScreen() {
   const { blockedApp } = useLocalSearchParams();
@@ -10,6 +11,13 @@ export default function InterceptScreen() {
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
+    // Intercept hardware back button to cleanly exit without navigation errors
+    const onBackPress = () => {
+      BackHandler.exitApp();
+      return true;
+    };
+    const backSub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 1000,
@@ -26,13 +34,36 @@ export default function InterceptScreen() {
       });
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      backSub.remove();
+      clearInterval(timer);
+    };
   }, []);
 
-  const handleContinue = () => {
-    // Normally we would just go back, but we might want to actually let them open it for x minutes
-    // For now, we'll just go back to home screen
-    router.replace('/');
+  const handleContinue = async () => {
+    const pkg = typeof blockedApp === 'string' ? blockedApp : null;
+    if (pkg) {
+      try {
+        const { snoozeApp } = await import('../utils/blockerManager');
+        snoozeApp(pkg, 5);
+      } catch (e) {
+        console.log('Could not snooze/launch app', e);
+      }
+    }
+    // Dismiss AttentionSpawner so user can proceed into the app
+    BackHandler.exitApp();
+  };
+
+  const handleNeverMind = async () => {
+    try {
+      const AttentionArchitectureModule = (await import('../../modules/attention-architecture')).default;
+      if (typeof (AttentionArchitectureModule as any).goToHomeScreen === 'function') {
+        (AttentionArchitectureModule as any).goToHomeScreen();
+      }
+    } catch (e) {
+      console.log('Could not navigate to home screen', e);
+    }
+    BackHandler.exitApp();
   };
 
   const appName = typeof blockedApp === 'string' ? blockedApp.split('.').pop()?.toUpperCase() : 'APP';
@@ -40,10 +71,14 @@ export default function InterceptScreen() {
   return (
     <View style={styles.container}>
       <BlurView intensity={80} style={StyleSheet.absoluteFill} tint="dark" />
-      
+
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-        <Ionicons name="leaf-outline" size={80} color="#fff" style={styles.icon} />
-        
+        <Image
+          source={require('@/assets/images/attentionspawner.png')}
+          style={styles.logoImage}
+          contentFit="contain"
+        />
+
         <Text style={styles.title}>Mindful Pause</Text>
         <Text style={styles.subtitle}>
           You are about to open {appName}.
@@ -62,7 +97,7 @@ export default function InterceptScreen() {
           )}
         </View>
 
-        <Pressable style={styles.cancelButton} onPress={() => router.replace('/')}>
+        <Pressable style={styles.cancelButton} onPress={handleNeverMind}>
           <Text style={styles.cancelButtonText}>Never mind</Text>
         </Pressable>
       </Animated.View>
@@ -83,6 +118,11 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: 'rgba(255,255,255,0.1)',
     width: '85%',
+  },
+  logoImage: {
+    width: 90,
+    height: 90,
+    marginBottom: 20,
   },
   icon: {
     marginBottom: 20,

@@ -1,6 +1,6 @@
-package com.attentionarchitecture
-
+package com.attentionarchitecture 
 import android.app.*
+
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -8,7 +8,9 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
+import android.net.Uri
 import android.os.Build
+
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -101,6 +103,18 @@ class AppBlockerForegroundService : Service() {
             val prefs: SharedPreferences = applicationContext.getSharedPreferences("attention_architecture_prefs", Context.MODE_PRIVATE)
             val blockedApps = prefs.getStringSet("blocked_apps", setOf()) ?: setOf()
 
+            val now = System.currentTimeMillis()
+            val snoozedApp = prefs.getString("snoozed_app", null)
+            val snoozeExpiry = prefs.getLong("snooze_expiry", 0L)
+            if (currentApp == snoozedApp && now < snoozeExpiry) {
+                return
+            }
+
+            val pkgSnoozeExpiry = prefs.getLong("snooze_expiry_$currentApp", 0L)
+            if (now < pkgSnoozeExpiry) {
+                return
+            }
+
             if (blockedApps.contains(currentApp)) {
                 Log.d("AppBlockerService", "Intercepting blocked app: $currentApp")
                 launchMindfulPause(currentApp)
@@ -111,9 +125,10 @@ class AppBlockerForegroundService : Service() {
     private fun launchMindfulPause(blockedPackage: String) {
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
         if (launchIntent != null) {
+            launchIntent.data = Uri.parse("myapp://intercept?blockedApp=$blockedPackage")
             launchIntent.putExtra("blocked_app", blockedPackage)
             launchIntent.putExtra("is_intercept", true)
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             startActivity(launchIntent)
         }
     }
@@ -154,5 +169,6 @@ class AppBlockerForegroundService : Service() {
     companion object {
         const val CHANNEL_ID = "app_blocker_channel"
         const val NOTIFICATION_ID = 1001
-    }
-}
+    } 
+
+} 
