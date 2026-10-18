@@ -3,8 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from
 
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AttentionArchitectureModule from '../../../modules/attention-architecture';
-import { getBlockedConfig, setAppBlocked } from '../../utils/blockerManager';
+import AttentionArchitectureModule from '../../modules/attention-architecture';
+import { getBlockedConfig, setAppBlocked } from '../utils/blockerManager';
 
 export default function HomeScreen() {
   const [hasUsagePermission, setHasUsagePermission] = useState(false);
