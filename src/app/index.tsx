@@ -70,6 +70,94 @@ export default function HomeScreen() {
       app.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // GATE: Do not let user access the app list or configuration until both permissions are granted
+  if (!isFullyConfigured) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ScrollView contentContainerStyle={styles.gateContentContainer}>
+          <View style={styles.gateHeader}>
+            <View style={styles.gateIconCircle}>
+              <Ionicons name="shield-checkmark" size={44} color="#4ade80" />
+            </View>
+            <Text style={styles.gateTitle}>Permissions Required</Text>
+            <Text style={styles.gateSubtitle}>
+              To mindfully protect your focus without violating your privacy, Attention Architecture needs two Android permissions to function:
+            </Text>
+          </View>
+
+          {/* Card 1: Usage Access */}
+          <View style={[styles.permCard, hasUsagePermission && styles.permCardGranted]}>
+            <View style={styles.permCardTop}>
+              <View style={styles.permCardHeaderLeft}>
+                <Ionicons
+                  name={hasUsagePermission ? 'checkmark-circle' : 'analytics-outline'}
+                  size={24}
+                  color={hasUsagePermission ? '#4ade80' : '#3b82f6'}
+                />
+                <Text style={styles.permCardTitle}>1. Usage Access</Text>
+              </View>
+              <View style={[styles.permBadge, hasUsagePermission ? styles.permBadgeGranted : styles.permBadgePending]}>
+                <Text style={[styles.permBadgeText, hasUsagePermission ? styles.permBadgeTextGranted : styles.permBadgeTextPending]}>
+                  {hasUsagePermission ? 'GRANTED' : 'REQUIRED'}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.permCardDesc}>
+              Allows detection of when a distracting app is brought to foreground so Mindful Pause can intervene.
+            </Text>
+            {!hasUsagePermission && (
+              <Pressable
+                style={styles.permActionButton}
+                onPress={() => AttentionArchitectureModule.openUsageStatsSettings()}
+              >
+                <Text style={styles.permActionButtonText}>Grant Usage Access</Text>
+                <Ionicons name="arrow-forward" size={16} color="#fff" style={{ marginLeft: 6 }} />
+              </Pressable>
+            )}
+          </View>
+
+          {/* Card 2: Display Over Other Apps */}
+          <View style={[styles.permCard, hasOverlayPermission && styles.permCardGranted]}>
+            <View style={styles.permCardTop}>
+              <View style={styles.permCardHeaderLeft}>
+                <Ionicons
+                  name={hasOverlayPermission ? 'checkmark-circle' : 'layers-outline'}
+                  size={24}
+                  color={hasOverlayPermission ? '#4ade80' : '#8b5cf6'}
+                />
+                <Text style={styles.permCardTitle}>2. Display Over Other Apps</Text>
+              </View>
+              <View style={[styles.permBadge, hasOverlayPermission ? styles.permBadgeGranted : styles.permBadgePending]}>
+                <Text style={[styles.permBadgeText, hasOverlayPermission ? styles.permBadgeTextGranted : styles.permBadgeTextPending]}>
+                  {hasOverlayPermission ? 'GRANTED' : 'REQUIRED'}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.permCardDesc}>
+              Allows the Mindful Pause screen to appear over chosen apps before mindless scrolling starts.
+            </Text>
+            {!hasOverlayPermission && (
+              <Pressable
+                style={[styles.permActionButton, { backgroundColor: '#8b5cf6' }]}
+                onPress={() => AttentionArchitectureModule.openOverlaySettings()}
+              >
+                <Text style={styles.permActionButtonText}>Grant Display Over Apps</Text>
+                <Ionicons name="arrow-forward" size={16} color="#fff" style={{ marginLeft: 6 }} />
+              </Pressable>
+            )}
+          </View>
+
+          <View style={styles.gateFooter}>
+            <Ionicons name="lock-closed-outline" size={16} color="#64748b" />
+            <Text style={styles.gateFooterText}>
+              Your data stays 100% on your device. We never inspect personal content, messages, or screen activity.
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -81,33 +169,15 @@ export default function HomeScreen() {
       <View style={styles.statusCard}>
         <View style={styles.statusHeader}>
           <Text style={styles.statusTitle}>Core Service</Text>
-          <View style={[styles.statusBadge, { backgroundColor: isFullyConfigured ? '#4ade8020' : '#ef444420' }]}>
-            <Text style={[styles.statusBadgeText, { color: isFullyConfigured ? '#4ade80' : '#ef4444' }]}>
-              {isFullyConfigured ? 'ACTIVE' : 'ACTION REQUIRED'}
+          <View style={[styles.statusBadge, { backgroundColor: '#4ade8020' }]}>
+            <Text style={[styles.statusBadgeText, { color: '#4ade80' }]}>
+              ACTIVE
             </Text>
           </View>
         </View>
         <Text style={styles.statusDescription}>
-          Usage Access and Overlay permissions are required to monitor and intercept blocked apps without breaking banking applications.
+          Protection is active. Selected apps below will prompt a mindful pause before opening.
         </Text>
-
-        {!hasUsagePermission && (
-          <Pressable
-            style={styles.actionButton}
-            onPress={() => AttentionArchitectureModule.openUsageStatsSettings()}
-          >
-            <Text style={styles.actionButtonText}>Grant Usage Access Permission</Text>
-          </Pressable>
-        )}
-
-        {!hasOverlayPermission && (
-          <Pressable
-            style={[styles.actionButton, { backgroundColor: '#8b5cf6', marginTop: 10 }]}
-            onPress={() => AttentionArchitectureModule.openOverlaySettings()}
-          >
-            <Text style={styles.actionButtonText}>Grant Display Over Apps Permission</Text>
-          </Pressable>
-        )}
       </View>
 
       <View style={styles.sectionHeaderRow}>
@@ -310,5 +380,124 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 15,
     flexShrink: 1,
+  },
+  gateContentContainer: {
+    padding: 24,
+    paddingTop: 40,
+    paddingBottom: 40,
+  },
+  gateHeader: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  gateIconCircle: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: '#4ade8015',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#4ade8030',
+  },
+  gateTitle: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#f8fafc',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  gateSubtitle: {
+    fontSize: 15,
+    color: '#94a3b8',
+    textAlign: 'center',
+    lineHeight: 22,
+    paddingHorizontal: 8,
+  },
+  permCard: {
+    backgroundColor: '#1e293b',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  permCardGranted: {
+    borderColor: '#4ade8040',
+    backgroundColor: '#132338',
+  },
+  permCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  permCardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  permCardTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#f1f5f9',
+  },
+  permBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  permBadgePending: {
+    backgroundColor: '#ef444420',
+  },
+  permBadgeGranted: {
+    backgroundColor: '#4ade8020',
+  },
+  permBadgeText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  permBadgeTextPending: {
+    color: '#ef4444',
+  },
+  permBadgeTextGranted: {
+    color: '#4ade80',
+  },
+  permCardDesc: {
+    color: '#94a3b8',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  permActionButton: {
+    flexDirection: 'row',
+    backgroundColor: '#3b82f6',
+    paddingVertical: 13,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  permActionButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  gateFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 20,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+  },
+  gateFooterText: {
+    color: '#64748b',
+    fontSize: 12,
+    lineHeight: 18,
+    flex: 1,
   },
 });
