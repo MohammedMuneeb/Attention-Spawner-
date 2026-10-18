@@ -69,8 +69,8 @@ export default function HomeScreen() {
       app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
   // GATE: Do not let user access the app list or configuration until both permissions are granted
+
   if (!isFullyConfigured) {
     return (
       <SafeAreaView style={styles.container}>
