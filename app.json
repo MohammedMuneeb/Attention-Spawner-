@@ -2,7 +2,7 @@
   "expo": {
     "name": "attentionspawner",
     "slug": "my-app",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/attentionspawner.png",
     "scheme": "myapp",
@@ -11,6 +11,7 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/attentionspawner.png",
